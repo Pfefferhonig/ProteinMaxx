@@ -1,0 +1,704 @@
+<title>ProteinMaxx</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@800;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a Nutrition-Facts-label vernacular. Heavy black rules, one wide column:
+   controls, top picks, the efficiency/density map, then the full sortable table. */
+:root {
+  --bg: #f6f7f5;
+  --surface: #ffffff;
+  --fg: #121513;
+  --muted: #5b615d;
+  --faint: #8a908b;
+  --rule: #dadfdb;
+  --rule-strong: #121513;
+  --hover: #eef1ee;
+  --sel: #e3ebf7;
+  --fat: #8d948f;
+  --carb: #c9cfca;
+  --warn: #8a5a00;
+  --s1: #2a78d6;   /* meat & seafood */
+  --s2: #eb6834;   /* dairy & eggs */
+  --s3: #1baf7a;   /* plant */
+  --font-display: "Libre Franklin", "Franklin Gothic Medium", "Arial Black", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111312; --surface: #191c1a; --fg: #eef1ee; --muted: #a4aba6; --faint: #7c837e;
+    --rule: #2c312e; --rule-strong: #eef1ee; --hover: #212522; --sel: #1d2a3d;
+    --fat: #7d847f; --carb: #444a46; --warn: #e0a640;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111312; --surface: #191c1a; --fg: #eef1ee; --muted: #a4aba6; --faint: #7c837e;
+  --rule: #2c312e; --rule-strong: #eef1ee; --hover: #212522; --sel: #1d2a3d;
+  --fat: #7d847f; --carb: #444a46; --warn: #e0a640;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+}
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+  display: grid; gap: 28px;
+}
+header { border-bottom: 10px solid var(--rule-strong); padding-bottom: 14px; display: grid; gap: 8px; }
+h1 {
+  font-family: var(--font-display); font-weight: 900; font-size: clamp(2.4rem, 6vw, 3.6rem);
+  line-height: 0.95; letter-spacing: -0.02em; margin: 0;
+}
+.lede { margin: 0; max-width: 68ch; color: var(--muted); }
+.formula {
+  font-family: var(--font-data); font-size: 13px; color: var(--fg);
+  border-top: 1px solid var(--rule-strong); padding-top: 8px; display: flex; flex-wrap: wrap; gap: 6px 22px;
+}
+.formula b { font-weight: 500; }
+h2 {
+  font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; margin: 0;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px;
+  border-bottom: 4px solid var(--rule-strong); padding-bottom: 6px; }
+.section-head p { margin: 0; color: var(--muted); font-size: 13px; }
+
+/* Controls */
+.controls { display: grid; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+input[type="search"], input[type="number"], select {
+  font: inherit; font-size: 14px; color: var(--fg); background: var(--surface);
+  border: 1px solid var(--rule); border-radius: 4px; padding: 7px 10px; min-height: 38px;
+}
+input[type="search"] { width: min(320px, 100%); }
+input[type="number"] { width: 84px; font-family: var(--font-data); }
+input:focus-visible, select:focus-visible, button:focus-visible, tr:focus-visible, circle:focus-visible {
+  outline: 2px solid var(--s1); outline-offset: 2px;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-size: 13px; color: var(--fg); background: var(--surface);
+  border: 1px solid var(--rule); border-radius: 999px; padding: 5px 12px; cursor: pointer; min-height: 32px;
+}
+.chip:hover { border-color: var(--faint); }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.chip .n { font-family: var(--font-data); font-size: 11px; margin-left: 6px; opacity: 0.6; }
+.chip:disabled { opacity: 0.35; cursor: not-allowed; border-style: dashed; }
+.chip:disabled:hover { border-color: var(--rule); }
+.seg { display: inline-flex; border: 1px solid var(--fg); border-radius: 4px; overflow: hidden; flex-wrap: wrap; }
+.seg button {
+  font: inherit; font-size: 13px; background: var(--surface); color: var(--fg); border: 0; padding: 7px 12px; cursor: pointer;
+  border-right: 1px solid var(--rule);
+}
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); font-weight: 600; }
+input[type="range"] { width: 180px; accent-color: var(--fg); }
+.range-val { font-family: var(--font-data); font-size: 13px; min-width: 64px; }
+.count { font-family: var(--font-data); font-size: 13px; color: var(--muted); }
+.linkbtn { font: inherit; font-size: 13px; background: none; border: 0; color: var(--fg); text-decoration: underline; cursor: pointer; padding: 4px 0; }
+
+/* Top picks */
+.picks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0; border: 1px solid var(--rule); background: var(--surface); }
+.pick { padding: 14px 16px; border-right: 1px solid var(--rule); display: grid; gap: 4px; min-width: 0; cursor: pointer; }
+.pick:last-child { border-right: 0; }
+.pick:hover { background: var(--hover); }
+.pick .rank { font-family: var(--font-data); font-size: 12px; color: var(--muted); }
+.pick .name { font-weight: 600; line-height: 1.25; }
+.pick .big { font-family: var(--font-display); font-weight: 900; font-size: 2.2rem; line-height: 1; }
+.pick .big small { font-family: var(--font-body); font-weight: 500; font-size: 13px; color: var(--muted); margin-left: 4px; }
+.pick .sub { font-size: 13px; color: var(--muted); }
+@media (max-width: 760px) { .pick { border-right: 0; border-bottom: 1px solid var(--rule); } .pick:last-child { border-bottom: 0; } }
+
+/* Chart */
+.chart-box { background: var(--surface); border: 1px solid var(--rule); padding: 12px 12px 6px; position: relative; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); padding: 0 4px 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+#chart svg { display: block; width: 100%; overflow: visible; }
+#chart text { font-family: var(--font-data); font-size: 11px; fill: var(--faint); }
+#chart .axis-title { font-family: var(--font-body); font-size: 12px; fill: var(--muted); }
+#chart .quad { font-family: var(--font-body); font-size: 11px; fill: var(--faint); text-transform: uppercase; letter-spacing: 0.08em; }
+#chart .pt { stroke: var(--surface); stroke-width: 2; cursor: pointer; }
+#chart .pt.dim { opacity: 0.18; }
+#chart .pt.on { stroke: var(--fg); stroke-width: 2.5; }
+#chart .sel-label { font-family: var(--font-body); font-size: 12px; font-weight: 600; fill: var(--fg); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; }
+.tip {
+  position: absolute; pointer-events: none; background: var(--fg); color: var(--bg); font-size: 12px;
+  padding: 8px 10px; border-radius: 4px; max-width: 240px; line-height: 1.4; z-index: 5;
+}
+.tip b { display: block; font-size: 13px; margin-bottom: 2px; }
+.tip .m { font-family: var(--font-data); }
+
+/* Table */
+.table-scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); }
+table { border-collapse: collapse; width: 100%; min-width: 1060px; font-size: 14px; }
+thead th {
+  text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600;
+  padding: 10px 10px 8px; border-bottom: 3px solid var(--rule-strong); vertical-align: bottom; white-space: nowrap;
+  position: sticky; top: 0; background: var(--surface);
+}
+thead th.num { text-align: right; }
+thead th button { all: unset; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+thead th button:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+thead th[aria-sort="descending"] button::after { content: "▼"; font-size: 9px; color: var(--fg); }
+thead th[aria-sort="ascending"] button::after { content: "▲"; font-size: 9px; color: var(--fg); }
+thead th[aria-sort] { color: var(--fg); }
+tbody td { padding: 9px 10px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--hover); }
+tbody tr.on { background: var(--sel); }
+td.num { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.rk { font-family: var(--font-data); color: var(--faint); width: 36px; }
+.fname { font-weight: 600; line-height: 1.3; }
+tbody td:nth-child(2) { min-width: 240px; }
+.meta { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; margin-top: 2px; }
+.tag { font-size: 11px; border: 1px solid var(--rule); border-radius: 3px; padding: 0 5px; color: var(--muted); }
+.tag.warn { color: var(--warn); border-color: currentColor; }
+.ppc { display: grid; grid-template-columns: 1fr 44px; gap: 8px; align-items: center; min-width: 150px; }
+.bar { height: 8px; background: var(--hover); border-radius: 0 4px 4px 0; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+.ppc span { font-family: var(--font-data); font-variant-numeric: tabular-nums; text-align: right; font-weight: 500; }
+.macro { display: flex; gap: 2px; height: 10px; width: 120px; }
+.macro i { display: block; height: 100%; }
+.macro i:first-child { border-radius: 2px 0 0 2px; }
+.macro i:last-child { border-radius: 0 2px 2px 0; }
+.mlegend { display: inline-flex; gap: 10px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.mlegend span { display: inline-flex; align-items: center; gap: 4px; }
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.q { font-family: var(--font-data); }
+.q.low { color: var(--warn); }
+.empty { padding: 28px 16px; text-align: center; color: var(--muted); }
+
+details { border-top: 4px solid var(--rule-strong); padding-top: 10px; }
+summary { cursor: pointer; font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.method { display: grid; gap: 10px; max-width: 72ch; font-size: 14px; color: var(--fg); margin-top: 10px; }
+.method p { margin: 0; }
+.method code { font-family: var(--font-data); font-size: 13px; }
+@media (prefers-reduced-motion: no-preference) { .bar i { transition: width .25s ease; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>ProteinMaxx</h1>
+    <p class="lede">Foods ranked by how much protein you get for the calories you spend. Every value is per 100 g of the food in the state listed (cooked, raw, dry), mostly from USDA FoodData Central.</p>
+    <div class="formula">
+      <span><b>Protein per 100 kcal</b> = protein g ÷ kcal × 100</span>
+      <span><b>% kcal from protein</b> = protein g × 4 ÷ kcal</span>
+      <span><b>Quality-adjusted</b> = protein per 100 kcal × amino-acid score (≤ 1)</span>
+    </div>
+  </header>
+
+  <section class="controls" aria-label="Filters">
+    <div class="row">
+      <div class="field"><span class="label" id="db-l">Database</span>
+        <div class="seg" role="group" aria-labelledby="db-l" id="db">
+          <button type="button" data-v="ch" aria-pressed="true">Swiss (FSVO) · 1,170+ foods</button>
+          <button type="button" data-v="us" aria-pressed="false">USDA picks · 95 foods</button>
+        </div></div>
+    </div>
+    <div class="row">
+      <label class="field" for="q"><span class="label">Search (English or German)</span>
+        <input id="q" type="search" placeholder="chicken, tofu, yogurt…" autocomplete="off"></label>
+      <label class="field" for="target"><span class="label">Protein target (g)</span>
+        <input id="target" type="number" min="5" max="200" step="5" value="30"></label>
+      <label class="field" for="sortsel"><span class="label">Rank by</span>
+        <select id="sortsel">
+          <option value="ppc">Protein per 100 kcal</option>
+          <option value="qpc">Quality-adjusted protein per 100 kcal</option>
+          <option value="p100">Protein per 100 g (density)</option>
+          <option value="serv">Protein per serving</option>
+          <option value="kcal">Fewest kcal per 100 g</option>
+        </select></label>
+    </div>
+    <div class="row">
+      <div class="field"><span class="label" id="diet-l">Diet</span>
+        <div class="seg" role="group" aria-labelledby="diet-l" id="diet">
+          <button type="button" data-v="any" aria-pressed="true">Anything</button>
+          <button type="button" data-v="pesc" aria-pressed="false">Pescatarian</button>
+          <button type="button" data-v="veg" aria-pressed="false">Vegetarian</button>
+          <button type="button" data-v="vegan" aria-pressed="false">Vegan</button>
+        </div></div>
+      <div class="field"><span class="label" id="flags-l">Also require</span>
+        <div class="chips" role="group" aria-labelledby="flags-l" id="flags">
+          <button type="button" class="chip" data-v="gf" aria-pressed="false" title="Excludes wheat-based foods. Items marked 'check label' may contain gluten depending on brand.">Gluten-free</button>
+          <button type="button" class="chip" data-v="df" aria-pressed="false">Dairy-free</button>
+          <button type="button" class="chip" data-v="nopork" aria-pressed="false">No pork</button>
+          <button type="button" class="chip" data-v="lowcarb" aria-pressed="false" title="Net carbs supply 10% of calories or less">Low-carb</button>
+          <button type="button" class="chip" data-v="lean" aria-pressed="false" title="Fat supplies 25% of calories or less">Lean</button>
+          <button type="button" class="chip" data-v="whole" aria-pressed="false" title="Hides protein powders">Whole foods only</button>
+        </div></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1 1 420px"><span class="label" id="groups-l">Food type</span>
+        <div class="chips" role="group" aria-labelledby="groups-l" id="groups"></div></div>
+      <label class="field" for="dens"><span class="label">Min protein per 100 g</span>
+        <span class="row" style="gap:10px"><input id="dens" type="range" min="0" max="30" step="1" value="0"><span class="range-val" id="dens-v">any</span></span></label>
+    </div>
+    <div class="row"><span class="count" id="count"></span><button type="button" class="linkbtn" id="reset">Reset filters</button></div>
+  </section>
+
+  <section aria-labelledby="picks-h" style="display:grid;gap:12px">
+    <div class="section-head"><h2 id="picks-h">Top picks</h2><p id="picks-sub"></p></div>
+    <div class="picks" id="picks"></div>
+  </section>
+
+  <section aria-labelledby="map-h" style="display:grid;gap:12px">
+    <div class="section-head"><h2 id="map-h">Efficiency vs. density</h2>
+      <p>Right = more protein per calorie. Up = more protein per gram, so less food to eat.</p></div>
+    <div class="chart-box">
+      <div class="legend" id="legend"></div>
+      <div id="chart"></div>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="tbl-h" style="display:grid;gap:12px">
+    <div class="section-head"><h2 id="tbl-h">All foods</h2>
+      <span class="mlegend">Calorie split:
+        <span><i class="sw" style="background:var(--fg)"></i>protein</span>
+        <span><i class="sw" style="background:var(--fat)"></i>fat</span>
+        <span><i class="sw" style="background:var(--carb)"></i>carbs</span></span></div>
+    <div class="table-scroll">
+      <table id="tbl">
+        <thead><tr>
+          <th scope="col">#</th>
+          <th scope="col" data-k="name"><button type="button">Food</button></th>
+          <th scope="col" data-k="ppc"><button type="button">Protein / 100 kcal</button></th>
+          <th scope="col" class="num" data-k="ppc" data-alias="pct"><button type="button">% kcal</button></th>
+          <th scope="col" class="num" data-k="q" title="Amino-acid quality score, 0 to 1"><button type="button">Quality</button></th>
+          <th scope="col" class="num" data-k="qpc"><button type="button">Adj. / 100 kcal</button></th>
+          <th scope="col" class="num" data-k="p100"><button type="button">Protein / 100 g</button></th>
+          <th scope="col" class="num" data-k="kcal"><button type="button">kcal / 100 g</button></th>
+          <th scope="col" class="num" data-k="p100" data-alias="tgt"><button type="button" id="tgt-h">For 30 g protein</button></th>
+          <th scope="col" class="num" data-k="serv"><button type="button">Per serving</button></th>
+          <th scope="col">Calorie split</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details>
+    <summary>How the numbers work</summary>
+    <div class="method">
+      <p><b>Swiss database.</b> Nutrient values come from the Swiss Food Composition Database (naehrwertdaten.ch), Federal Food Safety and Veterinary Office (FSVO), used under its free-use terms with attribution. Diet, gluten, pork, quality and portion fields are not part of the FSVO data: ProteinMaxx assigns them by rules based on each food's category and name. Prepared and mixed foods are tagged "check recipe".</p>
+      <p><b>Sources.</b> Foods marked USDA use values from USDA FoodData Central (SR Legacy), per 100 g of edible portion in the stated state. Protein powders and nutritional yeast vary by brand; those rows are typical label values and are tagged "label avg". Check your own product's label for those.</p>
+      <p><b>Protein per calorie barely changes with cooking.</b> Cooking drives off water, which raises protein and calories per 100 g together. Raw chicken breast (22.5 g, 120 kcal) and roasted (31 g, 165 kcal) both land near 18.8 g per 100 kcal. Weight-based columns do change, so match the state to how you weigh your food.</p>
+      <p><b>% kcal from protein</b> uses 4 kcal per gram. USDA calories use food-specific factors, so this percentage can differ by a few points from other tools and is capped at 100%.</p>
+      <p><b>Quality score</b> is an approximate amino-acid score based on published DIAAS and PDCAAS values, capped at 1.0. Animal proteins and soy score high. Grains, nuts and wheat gluten are limited by lysine. Collagen scores 0 because it lacks tryptophan, so it cannot cover protein needs alone. Values for vegetables, fruit and seeds are rough estimates. Mixing plant sources (grains with legumes) covers the gaps in practice.</p>
+      <p><b>Density matters too.</b> Spinach has an excellent ratio but you would need about a kilogram to get 30 g of protein. Use the "Min protein per 100 g" slider or the target column to keep results practical.</p>
+    </div>
+  </details>
+</div>
+
+<script src="swiss-foods.js"></script>
+<script>
+// [name, group, source, kcal, protein, fat, carbs, fiber, serving g, serving label, gluten (0 none, 1 contains, 2 check label), quality, ref (U = USDA, L = label avg)]
+const RAW = [
+  ["Chicken breast, skinless, roasted","Poultry","poultry",165,31.0,3.6,0,0,120,"1 small breast",0,1,"U"],
+  ["Chicken breast, skinless, raw","Poultry","poultry",120,22.5,2.6,0,0,120,"1 small breast",0,1,"U"],
+  ["Chicken thigh, skinless, roasted","Poultry","poultry",209,26.0,10.9,0,0,85,"3 oz",0,1,"U"],
+  ["Chicken drumstick with skin, roasted","Poultry","poultry",216,27.0,11.2,0,0,85,"3 oz",0,1,"U"],
+  ["Chicken wing with skin, roasted","Poultry","poultry",290,26.9,19.5,0,0,85,"3 oz",0,1,"U"],
+  ["Turkey breast, skinless, roasted","Poultry","poultry",147,30.1,2.1,0,0,85,"3 oz",0,1,"U"],
+  ["Ground turkey 93% lean, pan-browned","Poultry","poultry",213,27.1,11.6,0,0,85,"3 oz",0,1,"U"],
+  ["Turkey breast, deli slices","Poultry","poultry",104,17.1,1.7,4.2,0.5,56,"2 oz",2,1,"U"],
+  ["Beef, ground 95% lean, pan-browned","Meat","meat",164,25.6,6.4,0,0,85,"3 oz",0,1,"U"],
+  ["Beef, ground 80% lean, broiled patty","Meat","meat",254,25.8,16.6,0,0,85,"3 oz",0,1,"U"],
+  ["Beef, top sirloin steak, lean, broiled","Meat","meat",172,29.0,6.0,0,0,85,"3 oz",0,1,"U"],
+  ["Beef liver, pan-fried","Meat","meat",175,26.5,4.7,5.2,0,85,"3 oz",0,1,"U"],
+  ["Beef jerky","Meat","meat",410,33.2,25.6,11.0,1.8,28,"1 oz",2,1,"U"],
+  ["Lamb leg, lean, roasted","Meat","meat",191,28.3,7.7,0,0,85,"3 oz",0,1,"U"],
+  ["Pork tenderloin, lean, roasted","Meat","pork",143,26.2,3.5,0,0,85,"3 oz",0,1,"U"],
+  ["Bacon, pan-fried","Meat","pork",541,37.0,41.8,1.4,0,24,"3 slices",0,1,"U"],
+  ["Tuna, light, canned in water, drained","Seafood","fish",116,25.5,0.8,0,0,85,"3 oz",0,1,"U"],
+  ["Tuna, yellowfin, cooked","Seafood","fish",130,29.2,0.6,0,0,85,"3 oz",0,1,"U"],
+  ["Salmon, Atlantic farmed, cooked","Seafood","fish",206,22.1,12.4,0,0,85,"3 oz",0,1,"U"],
+  ["Salmon, Atlantic wild, cooked","Seafood","fish",182,25.4,8.1,0,0,85,"3 oz",0,1,"U"],
+  ["Cod, Atlantic, cooked","Seafood","fish",105,22.8,0.9,0,0,85,"3 oz",0,1,"U"],
+  ["Tilapia, cooked","Seafood","fish",128,26.2,2.7,0,0,85,"3 oz",0,1,"U"],
+  ["Halibut, cooked","Seafood","fish",111,22.5,1.6,0,0,85,"3 oz",0,1,"U"],
+  ["Sardines, canned in oil, drained","Seafood","fish",208,24.6,11.5,0,0,85,"3 oz",0,1,"U"],
+  ["Mackerel, Atlantic, cooked","Seafood","fish",262,23.9,17.8,0,0,85,"3 oz",0,1,"U"],
+  ["Shrimp, cooked","Seafood","shellfish",99,24.0,0.3,0.2,0,85,"3 oz",0,1,"U"],
+  ["Scallops, steamed","Seafood","shellfish",111,20.5,0.8,5.4,0,85,"3 oz",0,1,"U"],
+  ["Crab, Alaska king, steamed","Seafood","shellfish",97,19.4,1.5,0,0,85,"3 oz",0,1,"U"],
+  ["Imitation crab (surimi)","Seafood","fish",95,7.6,0.5,15.0,0.5,85,"3 oz",2,1,"U"],
+  ["Egg, whole, hard-boiled","Eggs","egg",155,12.6,10.6,1.1,0,50,"1 large egg",0,1,"U"],
+  ["Egg whites","Eggs","egg",52,10.9,0.2,0.7,0,99,"3 large whites",0,1,"U"],
+  ["Greek yogurt, plain, nonfat","Dairy","dairy",59,10.2,0.4,3.6,0,170,"1 container",0,1,"U"],
+  ["Greek yogurt, plain, whole milk","Dairy","dairy",97,9.0,5.0,4.0,0,170,"1 container",0,1,"U"],
+  ["Cottage cheese, 1% milkfat","Dairy","dairy",72,12.4,1.0,2.7,0,113,"½ cup",0,1,"U"],
+  ["Cottage cheese, 4% milkfat","Dairy","dairy",98,11.1,4.3,3.4,0,113,"½ cup",0,1,"U"],
+  ["Milk, skim","Dairy","dairy",34,3.4,0.1,5.0,0,244,"1 cup",0,1,"U"],
+  ["Milk, whole","Dairy","dairy",61,3.2,3.3,4.8,0,244,"1 cup",0,1,"U"],
+  ["Kefir, low-fat, plain","Dairy","dairy",41,3.8,0.9,4.5,0,243,"1 cup",0,1,"U"],
+  ["Mozzarella, part-skim","Dairy","dairy",254,24.3,15.9,2.8,0,28,"1 oz",0,1,"U"],
+  ["Cheddar","Dairy","dairy",403,24.9,33.1,1.3,0,28,"1 oz",0,1,"U"],
+  ["Parmesan, hard","Dairy","dairy",392,35.8,25.8,3.2,0,28,"1 oz",0,1,"U"],
+  ["Swiss cheese","Dairy","dairy",380,27.0,27.8,5.4,0,28,"1 oz",0,1,"U"],
+  ["Ricotta, part-skim","Dairy","dairy",138,11.4,7.9,5.1,0,124,"½ cup",0,1,"U"],
+  ["Feta","Dairy","dairy",264,14.2,21.3,4.1,0,28,"1 oz",0,1,"U"],
+  ["Whey protein isolate","Powders","dairy",370,88,1.0,2.0,0,30,"1 scoop",0,1,"L"],
+  ["Whey protein concentrate","Powders","dairy",400,78,6.0,8.0,0,30,"1 scoop",0,1,"L"],
+  ["Casein protein","Powders","dairy",360,80,1.5,6.0,1.0,33,"1 scoop",0,1,"L"],
+  ["Nonfat dry milk","Powders","dairy",362,36.2,0.8,52.0,0,23,"⅓ cup",0,1,"U"],
+  ["Egg white powder","Powders","egg",382,81.1,0,7.8,0,15,"2 tbsp",0,1,"U"],
+  ["Soy protein isolate","Powders","plant",335,88.3,3.4,7.4,5.6,28,"1 oz",0,0.9,"U"],
+  ["Pea protein isolate","Powders","plant",390,80,6.0,3.0,1.0,30,"1 scoop",0,0.82,"L"],
+  ["Collagen peptides","Powders","meat",360,90,0,0,0,20,"2 scoops",0,0,"L"],
+  ["Tofu, firm (calcium-set)","Plant proteins","plant",144,17.3,8.7,2.8,2.3,85,"3 oz",0,0.9,"U"],
+  ["Tofu, regular","Plant proteins","plant",76,8.1,4.8,1.9,0.3,85,"3 oz",0,0.9,"U"],
+  ["Tempeh","Plant proteins","plant",192,20.3,10.8,7.6,null,85,"3 oz",0,0.9,"U"],
+  ["Vital wheat gluten (seitan)","Plant proteins","plant",370,75.2,1.9,13.8,0.6,30,"¼ cup",1,0.25,"U"],
+  ["Textured soy protein (defatted soy flour)","Plant proteins","plant",327,51.5,1.2,33.9,17.5,24,"¼ cup dry",0,0.9,"U"],
+  ["Edamame, cooked","Plant proteins","plant",121,11.9,5.2,8.9,5.2,155,"1 cup shelled",0,0.9,"U"],
+  ["Soy milk, unsweetened","Plant proteins","plant",33,2.9,1.6,1.7,0.4,243,"1 cup",0,0.9,"U"],
+  ["Nutritional yeast","Plant proteins","plant",375,50,4.0,31,19,16,"2 tbsp",0,0.8,"L"],
+  ["Spirulina, dried","Plant proteins","plant",290,57.5,7.7,23.9,3.6,7,"1 tbsp",0,0.65,"U"],
+  ["Lentils, boiled","Beans & lentils","plant",116,9.0,0.4,20.1,7.9,198,"1 cup",0,0.65,"U"],
+  ["Chickpeas, boiled","Beans & lentils","plant",164,8.9,2.6,27.4,7.6,164,"1 cup",0,0.8,"U"],
+  ["Black beans, boiled","Beans & lentils","plant",132,8.9,0.5,23.7,8.7,172,"1 cup",0,0.6,"U"],
+  ["Kidney beans, boiled","Beans & lentils","plant",127,8.7,0.5,22.8,6.4,177,"1 cup",0,0.6,"U"],
+  ["Split peas, boiled","Beans & lentils","plant",118,8.3,0.4,21.1,8.3,196,"1 cup",0,0.7,"U"],
+  ["Soybeans, boiled","Beans & lentils","plant",172,18.2,9.0,8.4,6.0,172,"1 cup",0,0.9,"U"],
+  ["Peanut butter, smooth","Nuts & seeds","plant",588,25.1,50.4,19.6,6.0,32,"2 tbsp",0,0.45,"U"],
+  ["Peanuts, dry-roasted","Nuts & seeds","plant",585,24.4,49.7,21.3,8.0,28,"1 oz",0,0.45,"U"],
+  ["Powdered peanut butter (defatted peanut flour)","Nuts & seeds","plant",327,52.2,0.6,34.7,15.8,12,"2 tbsp",0,0.45,"U"],
+  ["Almonds","Nuts & seeds","plant",579,21.2,49.9,21.6,12.5,28,"1 oz",0,0.4,"U"],
+  ["Pumpkin seeds, hulled","Nuts & seeds","plant",559,30.2,49.1,10.7,6.0,28,"1 oz",0,0.6,"U"],
+  ["Hemp seeds, hulled","Nuts & seeds","plant",553,31.6,48.8,8.7,4.0,30,"3 tbsp",0,0.55,"U"],
+  ["Chia seeds","Nuts & seeds","plant",486,16.5,30.7,42.1,34.4,28,"1 oz",0,0.6,"U"],
+  ["Sunflower seed kernels","Nuts & seeds","plant",584,20.8,51.5,20.0,8.6,28,"1 oz",0,0.6,"U"],
+  ["Oats, rolled, dry","Grains","plant",379,13.2,6.5,67.7,10.1,40,"½ cup dry",2,0.55,"U"],
+  ["Quinoa, cooked","Grains","plant",120,4.4,1.9,21.3,2.8,185,"1 cup",0,0.75,"U"],
+  ["Rice, white, cooked","Grains","plant",130,2.7,0.3,28.2,0.4,158,"1 cup",0,0.6,"U"],
+  ["Rice, brown, cooked","Grains","plant",112,2.3,0.8,23.5,1.8,195,"1 cup",0,0.55,"U"],
+  ["Whole-wheat bread","Grains","plant",252,12.5,3.5,42.7,6.0,32,"1 slice",1,0.4,"U"],
+  ["Pasta, cooked","Grains","plant",158,5.8,0.9,30.9,1.8,140,"1 cup",1,0.45,"U"],
+  ["Buckwheat groats, cooked","Grains","plant",92,3.4,0.6,19.9,2.7,168,"1 cup",0,0.7,"U"],
+  ["Broccoli, raw","Vegetables","plant",34,2.8,0.4,6.6,2.6,91,"1 cup chopped",0,0.6,"U"],
+  ["Spinach, raw","Vegetables","plant",23,2.9,0.4,3.6,2.2,30,"1 cup",0,0.6,"U"],
+  ["Asparagus, raw","Vegetables","plant",20,2.2,0.1,3.9,2.1,134,"1 cup",0,0.6,"U"],
+  ["Brussels sprouts, raw","Vegetables","plant",43,3.4,0.3,9.0,3.8,88,"1 cup",0,0.6,"U"],
+  ["Mushrooms, white, raw","Vegetables","plant",22,3.1,0.3,3.3,1.0,70,"1 cup sliced",0,0.6,"U"],
+  ["Kale, raw","Vegetables","plant",49,4.3,0.9,8.8,3.6,67,"1 cup chopped",0,0.6,"U"],
+  ["Cauliflower, raw","Vegetables","plant",25,1.9,0.3,5.0,2.0,107,"1 cup",0,0.6,"U"],
+  ["Green peas, boiled","Vegetables","plant",84,5.4,0.2,15.6,5.5,160,"1 cup",0,0.7,"U"],
+  ["Potato, baked with skin","Vegetables","plant",93,2.5,0.1,21.2,2.2,173,"1 medium",0,0.85,"U"],
+  ["Sweet potato, baked","Vegetables","plant",90,2.0,0.2,20.7,3.3,114,"1 medium",0,0.6,"U"],
+  ["Guava","Fruit","plant",68,2.6,1.0,14.3,5.4,165,"1 cup",0,0.5,"U"],
+  ["Avocado","Fruit","plant",160,2.0,14.7,8.5,6.7,50,"⅓ avocado",0,0.5,"U"],
+  ["Banana","Fruit","plant",89,1.1,0.3,22.8,2.6,118,"1 medium",0,0.5,"U"],
+  ["Apple","Fruit","plant",52,0.3,0.2,13.8,2.4,182,"1 medium",0,0.5,"U"],
+];
+
+const USDA_GROUPS = ["Poultry","Meat","Seafood","Eggs","Dairy","Powders","Plant proteins","Beans & lentils","Nuts & seeds","Grains","Vegetables","Fruit"];
+const SWISS_GROUPS = ["Poultry","Meat","Sausages & cold cuts","Fish & seafood","Eggs","Milk & yoghurt","Quark & fresh cheese","Cheese","Powders","Plant proteins","Dairy alternatives","Beans & lentils","Nuts & seeds","Grains & bread","Vegetables","Fruit","Prepared dishes","Sweets & snacks","Fats, sauces & spreads","Drinks"];
+let FOODS = [], GROUPS = [];
+const CLASSES = {
+  animal: { label: "Meat & seafood", v: "--s1" },
+  dairy:  { label: "Dairy & eggs",   v: "--s2" },
+  plant:  { label: "Plant",          v: "--s3" },
+};
+const classOf = s => s === "plant" ? "plant" : (s === "dairy" || s === "egg") ? "dairy" : "animal";
+
+const makeFoods = rows => rows.map(([name, group, src, kcal, p, f, c, fib, sv, sl, gl, q, ref, de = "", flags = ""], id) => {
+  const ppc = p / kcal * 100;
+  const net = Math.max(0, c - (fib || 0));
+  return {
+    id, name, group, src, kcal, p, f, c, fib, sv, sl, gl, q, ref,
+    cls: classOf(src),
+    ppc,
+    pct: Math.min(100, p * 4 / kcal * 100),
+    qpc: ppc * Math.min(1, q),
+    p100: p,
+    serv: p * sv / 100,
+    netPct: net * 4 / kcal * 100,
+    fatPct: f * 9 / kcal * 100,
+    split: (() => { const P = p * 4, F = f * 9, C = c * 4, T = P + F + C || 1; return [P / T, F / T, C / T]; })(),
+    de, composite: flags.includes("c"), porkMaybe: flags.includes("k"),
+    hay: (name + " " + de + " " + group).toLowerCase(),
+  };
+});
+
+function loadDataset() {
+  const swiss = S.db === "ch" && Array.isArray(window.SWISS_FOODS);
+  FOODS = makeFoods(swiss ? [...window.SWISS_FOODS, ...RAW.filter(r => r[1] === "Powders")] : RAW);
+  GROUPS = swiss ? SWISS_GROUPS : USDA_GROUPS;
+  S.groups = S.groups.filter(g => GROUPS.includes(g));
+  $("groups").innerHTML = `<button type="button" class="chip" data-v="">All</button>` +
+    GROUPS.map(g => `<button type="button" class="chip" data-v="${esc(g)}">${esc(g)}<span class="n"></span></button>`).join("");
+}
+let rowLimit = 200;
+
+const DEFAULTS = { db: "ch", q: "", diet: "any", flags: [], groups: [], dens: 0, target: 30, sort: "ppc", dir: -1 };
+let S = { ...DEFAULTS };
+try { const saved = JSON.parse(localStorage.getItem("pmx-state") || "null"); if (saved) S = { ...DEFAULTS, ...saved }; } catch (e) {}
+let selected = null;
+const save = () => { try { localStorage.setItem("pmx-state", JSON.stringify(S)); } catch (e) {} };
+
+const $ = id => document.getElementById(id);
+const fmt = (n, d = 1) => n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmt0 = n => Math.round(n).toLocaleString();
+const color = cls => `var(${CLASSES[cls].v})`;
+const esc = s => s.replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+
+// forChips: ignore search and food-type selection, to count what each food type still offers
+function passes(fd, forChips = false) {
+  const q = S.q.trim().toLowerCase();
+  if (!forChips && q && !q.split(/\s+/).every(w => fd.hay.includes(w))) return false;
+  if (S.diet === "vegan" && fd.src !== "plant") return false;
+  if (S.diet === "veg" && !["plant", "dairy", "egg"].includes(fd.src)) return false;
+  if (S.diet === "pesc" && !["plant", "dairy", "egg", "fish", "shellfish"].includes(fd.src)) return false;
+  const fl = new Set(S.flags);
+  if (fl.has("gf") && fd.gl === 1) return false;
+  if (fl.has("df") && fd.src === "dairy") return false;
+  if (fl.has("nopork") && (fd.src === "pork" || fd.porkMaybe)) return false;
+  if (fl.has("lowcarb") && fd.netPct > 10) return false;
+  if (fl.has("lean") && fd.fatPct > 25) return false;
+  if (fl.has("whole") && fd.group === "Powders") return false;
+  if (!forChips && S.groups.length && !S.groups.includes(fd.group)) return false;
+  if (fd.p < S.dens) return false;
+  return true;
+}
+
+function sorted(list) {
+  const k = S.sort, d = S.dir;
+  return [...list].sort((a, b) => {
+    if (k === "name") return d * a.name.localeCompare(b.name);
+    return d * (a[k] - b[k]) || b.ppc - a.ppc;
+  });
+}
+
+const METRIC = {
+  ppc:  { label: "g protein / 100 kcal", get: f => fmt(f.ppc) },
+  qpc:  { label: "quality-adj. g / 100 kcal", get: f => fmt(f.qpc) },
+  p100: { label: "g protein / 100 g", get: f => fmt(f.p) },
+  serv: { label: "g protein / serving", get: f => fmt(f.serv) },
+  kcal: { label: "kcal / 100 g", get: f => fmt0(f.kcal) },
+  q:    { label: "quality score", get: f => fmt(f.q, 2) },
+  name: { label: "g protein / 100 kcal", get: f => fmt(f.ppc) },
+};
+
+function forTarget(f) {
+  const grams = S.target / f.p * 100;
+  return { grams, kcal: grams * f.kcal / 100 };
+}
+const gramsText = g => g >= 1000 ? fmt(g / 1000, 1) + " kg" : fmt0(g) + " g";
+
+let avail = {};
+function render() {
+  avail = {};
+  FOODS.forEach(f => { if (passes(f, true)) avail[f.group] = (avail[f.group] || 0) + 1; });
+  S.groups = S.groups.filter(g => avail[g]);
+  const list = sorted(FOODS.filter(f => passes(f)));
+  save();
+  syncControls();
+  $("count").textContent = `${list.length.toLocaleString()} of ${FOODS.length.toLocaleString()} foods`;
+  rowLimit = 200;
+  renderPicks(list);
+  renderTable(list);
+  renderChart(list);
+}
+
+function syncControls() {
+  $("q").value !== S.q && ($("q").value = S.q);
+  $("target").value = S.target;
+  $("sortsel").value = ["ppc", "qpc", "p100", "serv", "kcal"].includes(S.sort) ? S.sort : "ppc";
+  $("dens").value = S.dens;
+  $("dens-v").textContent = S.dens ? `≥ ${S.dens} g` : "any";
+  document.querySelectorAll("#db button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === S.db));
+  document.querySelectorAll("#diet button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === S.diet));
+  document.querySelectorAll("#flags .chip").forEach(b => b.setAttribute("aria-pressed", S.flags.includes(b.dataset.v)));
+  document.querySelectorAll("#groups .chip").forEach(b => {
+    b.setAttribute("aria-pressed", b.dataset.v === "" ? !S.groups.length : S.groups.includes(b.dataset.v));
+    if (b.dataset.v === "") return;
+    const n = avail[b.dataset.v] || 0;
+    b.disabled = !n;
+    b.querySelector(".n").textContent = n;
+    b.title = n ? "" : "No foods of this type fit your diet and filters";
+  });
+  $("tgt-h").textContent = `For ${S.target} g protein`;
+  document.querySelectorAll("#tbl thead th[data-k]").forEach(th => {
+    const active = th.dataset.k === S.sort && !th.dataset.alias;
+    if (active) th.setAttribute("aria-sort", S.dir < 0 ? "descending" : "ascending"); else th.removeAttribute("aria-sort");
+  });
+}
+
+function renderPicks(list) {
+  const m = METRIC[S.sort] || METRIC.ppc;
+  $("picks-sub").textContent = list.length ? `Ranked by ${m.label}` : "";
+  const top = list.slice(0, 3);
+  $("picks").innerHTML = top.length ? top.map((f, i) => {
+    const t = forTarget(f);
+    return `<div class="pick" data-id="${f.id}" tabindex="0" role="button" aria-label="Select ${esc(f.name)}">
+      <span class="rank">No. ${i + 1} · ${esc(f.group)}</span>
+      <span class="name">${esc(f.name)}</span>
+      <span class="big">${m.get(f)}<small>${m.label}</small></span>
+      <span class="sub">${S.target} g protein = ${gramsText(t.grams)} of food, ${fmt0(t.kcal)} kcal</span>
+    </div>`;
+  }).join("") : `<div class="empty">No foods match these filters. Try removing one.</div>`;
+}
+
+function renderTable(list) {
+  const maxPpc = 28;
+  const more = list.length > rowLimit
+    ? `<tr><td colspan="11" class="empty"><button type="button" class="chip" id="more">Show ${Math.min(200, list.length - rowLimit)} more of ${list.length - rowLimit} remaining</button></td></tr>` : "";
+  $("tbody").innerHTML = (list.length ? list.slice(0, rowLimit).map((f, i) => {
+    const t = forTarget(f);
+    const tags = [
+      f.ref === "L" ? `<span class="tag" title="Typical label value; varies by brand">label avg</span>` : "",
+      f.gl === 2 ? `<span class="tag warn" title="Gluten depends on brand or processing">check label for gluten</span>` : "",
+      f.gl === 1 ? `<span class="tag">contains gluten</span>` : "",
+      f.q === 0 ? `<span class="tag warn" title="Missing tryptophan; incomplete protein">incomplete protein</span>` : "",
+      f.composite ? `<span class="tag" title="Mixed or prepared food; diet tags come from the name, so check the recipe">check recipe</span>` : "",
+      f.porkMaybe ? `<span class="tag warn">may contain pork</span>` : "",
+    ].join("");
+    const deName = f.de && f.de !== f.name ? `<span lang="de">${esc(f.de)}</span>` : "";
+    const [sp, sf, sc] = f.split;
+    return `<tr data-id="${f.id}" tabindex="0" class="${selected === f.id ? "on" : ""}">
+      <td class="rk">${i + 1}</td>
+      <td><div class="fname">${esc(f.name)}</div>
+        <div class="meta">${deName}<span><i class="dot" style="background:${color(f.cls)};width:8px;height:8px"></i> ${esc(f.group)}</span>${tags}</div></td>
+      <td><div class="ppc"><div class="bar"><i style="width:${Math.min(100, f.ppc / maxPpc * 100)}%;background:${color(f.cls)}"></i></div><span>${fmt(f.ppc)}</span></div></td>
+      <td class="num">${fmt0(f.pct)}%</td>
+      <td class="num"><span class="q ${f.q < 0.6 ? "low" : ""}">${fmt(f.q, 2)}</span></td>
+      <td class="num">${fmt(f.qpc)}</td>
+      <td class="num">${fmt(f.p)} g</td>
+      <td class="num">${fmt0(f.kcal)}</td>
+      <td class="num">${gramsText(t.grams)} · ${fmt0(t.kcal)} kcal</td>
+      <td class="num">${fmt(f.serv)} g <span style="color:var(--faint)">/ ${esc(f.sl)}</span></td>
+      <td><div class="macro" title="Protein ${fmt0(sp * 100)}% · fat ${fmt0(sf * 100)}% · carbs ${fmt0(sc * 100)}% of calories">
+        ${sp > 0.005 ? `<i style="width:${sp * 100}%;background:var(--fg)"></i>` : ""}
+        ${sf > 0.005 ? `<i style="width:${sf * 100}%;background:var(--fat)"></i>` : ""}
+        ${sc > 0.005 ? `<i style="width:${sc * 100}%;background:var(--carb)"></i>` : ""}</div></td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="11" class="empty">No foods match these filters. Try removing one.</td></tr>`) + more;
+}
+
+// Chart: x = protein per 100 kcal (linear), y = protein per 100 g (log)
+function renderChart(list) {
+  const box = $("chart");
+  const W = Math.max(300, box.clientWidth || 700);
+  const narrow = W < 520;
+  const H = narrow ? 320 : 400;
+  const m = { l: narrow ? 40 : 52, r: 14, t: 18, b: narrow ? 50 : 54 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const X0 = 0, X1 = Math.max(28, Math.ceil(Math.max(...FOODS.map(f => f.ppc)))), Y0 = 0.25, Y1 = 100;
+  const x = v => m.l + (v - X0) / (X1 - X0) * iw;
+  const y = v => m.t + (Math.log(Y1) - Math.log(v)) / (Math.log(Y1) - Math.log(Y0)) * ih;
+  const shown = new Set(list.map(f => f.id));
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Scatter plot of protein per 100 kcal against protein per 100 grams">`;
+  const xt = narrow ? [0, 10, 20] : [0, 5, 10, 15, 20, 25];
+  xt.forEach(v => {
+    s += `<line x1="${x(v)}" x2="${x(v)}" y1="${m.t}" y2="${m.t + ih}" stroke="var(--rule)" stroke-width="1"/>`;
+    s += `<text x="${x(v)}" y="${m.t + ih + 16}" text-anchor="middle">${v} g · ${v * 4}%</text>`;
+  });
+  [0.5, 1, 2, 5, 10, 20, 50, 100].forEach(v => {
+    s += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule)" stroke-width="1"/>`;
+    s += `<text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  });
+  s += `<line x1="${m.l}" x2="${m.l + iw}" y1="${m.t + ih}" y2="${m.t + ih}" stroke="var(--faint)" stroke-width="1"/>`;
+  s += `<text class="axis-title" x="${m.l + iw / 2}" y="${H - 8}" text-anchor="middle">Protein per 100 kcal (and % of calories from protein)</text>`;
+  s += `<text class="axis-title" transform="translate(12 ${m.t + ih / 2}) rotate(-90)" text-anchor="middle">Protein per 100 g (log)</text>`;
+  if (!narrow) {
+    s += `<text class="quad" x="${m.l + iw - 6}" y="${m.t + 14}" text-anchor="end">Lean and compact</text>`;
+    s += `<text class="quad" x="${m.l + 8}" y="${m.t + 14}">Dense but calorie-heavy</text>`;
+    s += `<text class="quad" x="${m.l + iw - 6}" y="${m.t + ih - 8}" text-anchor="end">Efficient but bulky</text>`;
+  }
+  // dimmed first, then shown, then selected on top
+  const order = [...FOODS].sort((a, b) => (shown.has(a.id) - shown.has(b.id)) || ((a.id === selected) - (b.id === selected)));
+  order.forEach(f => {
+    const cls = ["pt", shown.has(f.id) ? "" : "dim", f.id === selected ? "on" : ""].join(" ");
+    s += `<circle class="${cls}" data-id="${f.id}" cx="${x(Math.min(f.ppc, X1))}" cy="${y(Math.max(Y0, f.p))}" r="${f.id === selected ? 7 : 5}" fill="${color(f.cls)}"/>`;
+  });
+  if (selected != null) {
+    const f = FOODS[selected];
+    const cx = x(f.ppc), cy = y(f.p), right = cx > m.l + iw * 0.6;
+    s += `<text class="sel-label" x="${cx + (right ? -12 : 12)}" y="${cy + 4}" text-anchor="${right ? "end" : "start"}">${esc(f.name)}</text>`;
+  }
+  s += `</svg>`;
+  box.innerHTML = s;
+}
+
+function showTip(f, evt) {
+  const tip = $("tip"), boxR = $("chart").parentElement.getBoundingClientRect();
+  const t = forTarget(f);
+  tip.innerHTML = `<b>${esc(f.name)}</b><span class="m">${fmt(f.ppc)} g / 100 kcal · ${fmt0(f.pct)}% kcal</span><br>
+    <span class="m">${fmt(f.p)} g protein · ${fmt0(f.kcal)} kcal per 100 g</span><br>${S.target} g protein: ${gramsText(t.grams)}, ${fmt0(t.kcal)} kcal`;
+  tip.hidden = false;
+  let lx = evt.clientX - boxR.left + 14, ly = evt.clientY - boxR.top + 14;
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  if (lx + tw > boxR.width - 8) lx = evt.clientX - boxR.left - tw - 14;
+  if (ly + th > boxR.height - 8) ly = evt.clientY - boxR.top - th - 14;
+  tip.style.left = Math.max(4, lx) + "px"; tip.style.top = Math.max(4, ly) + "px";
+}
+
+function select(id, scroll) {
+  selected = selected === id ? null : id;
+  render();
+  if (scroll && selected != null) {
+    const row = document.querySelector(`#tbody tr[data-id="${id}"]`);
+    row && row.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
+}
+
+loadDataset();
+$("db").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b || b.dataset.v === S.db) return;
+  S.db = b.dataset.v; S.groups = []; selected = null; loadDataset(); render();
+});
+$("legend").innerHTML = Object.values(CLASSES).map(c => `<span><i class="dot" style="background:var(${c.v})"></i>${c.label}</span>`).join("") +
+  `<span style="color:var(--faint)">Faded dots are filtered out</span>`;
+
+// Events
+$("q").addEventListener("input", e => { S.q = e.target.value; render(); });
+$("target").addEventListener("change", e => { const v = +e.target.value; S.target = v >= 1 && v <= 500 ? v : 30; render(); });
+$("sortsel").addEventListener("change", e => { S.sort = e.target.value; S.dir = S.sort === "kcal" ? 1 : -1; render(); });
+$("dens").addEventListener("input", e => { S.dens = +e.target.value; render(); });
+$("diet").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { S.diet = b.dataset.v; render(); } });
+$("flags").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const v = b.dataset.v; S.flags = S.flags.includes(v) ? S.flags.filter(x => x !== v) : [...S.flags, v]; render();
+});
+$("groups").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const v = b.dataset.v;
+  S.groups = v === "" ? [] : S.groups.includes(v) ? S.groups.filter(x => x !== v) : [...S.groups, v];
+  render();
+});
+$("reset").addEventListener("click", () => { S = { ...DEFAULTS }; selected = null; loadDataset(); render(); });
+document.querySelector("#tbl thead").addEventListener("click", e => {
+  const th = e.target.closest("th[data-k]"); if (!th) return;
+  const k = th.dataset.k;
+  const natural = (k === "kcal" || k === "name") ? 1 : -1;
+  if (S.sort === k && !th.dataset.alias) S.dir = -S.dir; else { S.sort = k; S.dir = natural; }
+  render();
+});
+$("tbody").addEventListener("click", e => {
+  if (e.target.id === "more") { rowLimit += 200; renderTable(sorted(FOODS.filter(f => passes(f)))); return; }
+  const tr = e.target.closest("tr[data-id]"); if (tr) select(+tr.dataset.id, false); });
+$("tbody").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { const tr = e.target.closest("tr[data-id]"); if (tr) { e.preventDefault(); select(+tr.dataset.id, false); } } });
+$("picks").addEventListener("click", e => { const p = e.target.closest(".pick"); if (p) select(+p.dataset.id, true); });
+$("picks").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { const p = e.target.closest(".pick"); if (p) { e.preventDefault(); select(+p.dataset.id, true); } } });
+$("chart").addEventListener("mousemove", e => { const c = e.target.closest("circle[data-id]"); if (c) showTip(FOODS[+c.dataset.id], e); else $("tip").hidden = true; });
+$("chart").addEventListener("mouseleave", () => { $("tip").hidden = true; });
+$("chart").addEventListener("click", e => { const c = e.target.closest("circle[data-id]"); if (c) { $("tip").hidden = true; select(+c.dataset.id, true); } });
+
+let rt;
+new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(() => renderChart(sorted(FOODS.filter(f => passes(f)))), 80); }).observe($("chart"));
+render();
+</script>
