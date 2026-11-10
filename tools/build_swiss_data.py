@@ -63,7 +63,7 @@ def has(name, words):
     return any(re.search(r"\b" + w, name) for w in words)
 
 
-PORK = ["pork", "ham\\b", "bacon", "salami", "lard", "coppa", "cotechino", "mortadella", "cervelat", "luganighe",
+PORK = ["pork", "porc\\b", "ham\\b", "bacon", "salami", "lard", "coppa", "cotechino", "mortadella", "cervelat", "luganighe",
         "landj", "sch.blig", "schweins", "cordon bleu", "carbonara", "luncheon", "lyoner", "bierwurst", "pantli",
         "minipic", "cabbage sausage", "black pudding", "liver sausage", "cotto", "hot dog", "gelatin", "fruit gum",
         "jelly", "marshmallow", "wienerli", "frankfurter", "chorizo", "prosciutto", "speck", "cold cuts", "hawaii",
@@ -71,8 +71,8 @@ PORK = ["pork", "ham\\b", "bacon", "salami", "lard", "coppa", "cotechino", "mort
 MEAT = ["beef", "veal", "lamb", "mutton", "meat", "chicken", "turkey", "poultry", "duck", "goose", "horse", "deer",
         "venison", "hare", "rabbit", "goat", "game", "liver", "burger", "kebab", "bolognese", "lasagne", "sausage",
         "escalope", "chop\\b", "ragout", "goulash", "chili con carne", "bouillon, meat", "bresaola", "capuns",
-        "tartare", "cannelloni filled with meat", "ostrich", "kangaroo", "wild boar", "bouillon, poultry", "nugget",
-        "piccata"]
+        "cannelloni filled with meat", "ostrich", "kangaroo", "wild boar", "bouillon, poultry", "nugget",
+        "schnitzel"]
 FISH = ["fish", "salmon", "tuna", "trout", "cod\\b", "herring", "sardine", "anchov", "mackerel", "perch", "pike",
         "pangasius", "plaice", "sole\\b", "hake", "pollock", "saithe", "char\\b", "whitefish", "redfish", "sushi",
         "caviar", "tilapia", "zander", "halibut", "sea bass", "sea bream", "monkfish", "eel"]
@@ -80,13 +80,13 @@ SHELL = ["shrimp", "prawn", "mussel", "oyster", "crab", "lobster", "squid", "oct
 DAIRY = ["milk", "chees", "cream", "butter", "yog", "quark", "curd", "mozzarella", "parmesan", "ricotta", "mascarpone",
          "gratin", "fondue", "raclette", "pizza", "b.chamel", "chocolate", "ice cream", "porridge", "risotto",
          "macaroni from the alps", "kefir", "whey", "cappuccino", "latte", "tiramisu", "panna cotta", "rösti", "ziger"]
-EGG = ["egg", "mayonnaise", "omelette", "quiche", "meringue", "pancake", "cr.pe", "spätzli", "sp.tzli", "custard",
-       "french toast", "noodle", "biscuit", "cake", "sponge", "waffle", "mycoprotein", "vegetarian"]
+EGG = ["eggs?\\b", "mayonnaise", "omelette", "quiche", "meringue", "pancake", "cr.pe", "spätzli", "sp.tzli", "custard",
+       "french toast", "piccata", "noodle", "biscuit", "cake", "sponge", "waffle", "mycoprotein", "vegetarian"]
 GLUTEN = ["wheat", "spelt", "rye", "barley", "bread", "pasta", "noodle", "spaghetti", "macaroni", "couscous",
           "bulgur", "semolina", "pizza", "cake", "biscuit", "cookie", "pastry", "croissant", "sandwich", "breaded",
           "cordon bleu", "nugget", "cr.pe", "pancake", "waffle", "wafer", "cracker", "rusk", "pretzel", "seitan",
           "dumpling", "sp.tzli", "gnocchi", "lasagne", "ravioli", "tortellini", "cannelloni", "malt", "crouton",
-          "burger", "kebab", "wrap", "tortilla", "quiche", "pie\\b", "tart", "flour omelette", "pita", "zwieback",
+          "burger", "kebab", "wrap", "tortilla", "quiche", "pies?\\b", "tarts?\\b", "flour omelette", "pita", "zwieback",
           "pastry", "dough", "toast", "hot dog", "capuns", "bami", "brioche", "gugelhopf", "plait", "zopf",
           "baguette", "roll", "flour", "graham", "bun\\b", "cereal", "flakes", "bran", "germ", "grünkern", "farro",
           "beer", "muesli", "müesli", "porridge", "oat", "piccata", "french toast", "escalope.*breaded"]
@@ -152,6 +152,9 @@ def source_of(main, sub, name):
                    "Milk and yoghurt beverages", "Coffee", "Cocoa beverages")
     if "vegan" in name:
         return "plant", composite, False
+    # Vegetarian substitutes (e.g. mycoprotein) can contain egg; their names also use meat words like "escalope"
+    if "vegetarian" in name and main.startswith("Plant based"):
+        return "egg", composite, False
     pork_hit = has(name, PORK) and "vegetarian" not in name
     if main == "Sausages and cold meats":
         if has(name, ["poultry", "chicken", "turkey"]) and not pork_hit:
@@ -194,7 +197,7 @@ def source_of(main, sub, name):
     if has(name, DAIRY) and not has(name, ["coconut milk", "almond milk", "oat milk", "soy", "cocoa butter",
                                             "peanut butter", "cream of tartar", "dark chocolate"]):
         return "dairy", composite, False
-    if has(name, EGG) and not has(name, ["eggplant", "egg-free", "without egg"]):
+    if has(name, EGG) and not has(name, ["egg-free", "without egg"]):
         return "egg", composite, False
     return "plant", composite and sub not in PURE_PLANT_SUBS, False
 

@@ -1,3 +1,5 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ProteinMaxx</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,6 +21,10 @@
   --fat: #8d948f;
   --carb: #c9cfca;
   --warn: #8a5a00;
+  --ok: #1d6b38;
+  --danger: #b3261e;
+  --track: #dde2de;   /* empty part of target bars */
+  --over: #6250d6;    /* part of a target bar beyond 100% */
   --s1: #2a78d6;   /* meat & seafood */
   --s2: #eb6834;   /* dairy & eggs */
   --s3: #1baf7a;   /* plant */
@@ -30,7 +36,8 @@
   :root:not([data-theme="light"]) {
     --bg: #111312; --surface: #191c1a; --fg: #eef1ee; --muted: #a4aba6; --faint: #7c837e;
     --rule: #2c312e; --rule-strong: #eef1ee; --hover: #212522; --sel: #1d2a3d;
-    --fat: #7d847f; --carb: #444a46; --warn: #e0a640;
+    --fat: #7d847f; --carb: #444a46; --warn: #e0a640; --ok: #5cc27a; --danger: #f2867e;
+    --track: #3b423e; --over: #9085e9;
     --s1: #3987e5; --s2: #d95926; --s3: #199e70;
     color-scheme: dark;
   }
@@ -38,11 +45,14 @@
 :root[data-theme="dark"] {
   --bg: #111312; --surface: #191c1a; --fg: #eef1ee; --muted: #a4aba6; --faint: #7c837e;
   --rule: #2c312e; --rule-strong: #eef1ee; --hover: #212522; --sel: #1d2a3d;
-  --fat: #7d847f; --carb: #444a46; --warn: #e0a640;
+  --fat: #7d847f; --carb: #444a46; --warn: #e0a640; --ok: #5cc27a; --danger: #f2867e;
+  --track: #3b423e; --over: #9085e9;
   --s1: #3987e5; --s2: #d95926; --s3: #199e70;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
 body {
   background: var(--bg); color: var(--fg);
   font-family: var(--font-body); font-size: 15px; line-height: 1.5;
@@ -78,7 +88,7 @@ h2 {
 .row { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
 .field { display: grid; gap: 4px; min-width: 0; }
 .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
-input[type="search"], input[type="number"], select {
+input[type="search"], input[type="number"], input[type="text"], select {
   font: inherit; font-size: 14px; color: var(--fg); background: var(--surface);
   border: 1px solid var(--rule); border-radius: 4px; padding: 7px 10px; min-height: 38px;
 }
@@ -186,13 +196,114 @@ summary { cursor: pointer; font-family: var(--font-display); font-weight: 800; t
 .method { display: grid; gap: 10px; max-width: 72ch; font-size: 14px; color: var(--fg); margin-top: 10px; }
 .method p { margin: 0; }
 .method code { font-family: var(--font-data); font-size: 13px; }
-@media (prefers-reduced-motion: no-preference) { .bar i { transition: width .25s ease; } }
+@media (prefers-reduced-motion: no-preference) { .bar i, .goal i { transition: width .25s ease; } }
+
+/* Tabs */
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--rule); margin-top: -12px; }
+.tab {
+  font-family: var(--font-display); font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em;
+  background: none; border: 0; border-bottom: 4px solid transparent; margin-bottom: -1px; padding: 10px 14px 8px;
+  color: var(--muted); cursor: pointer;
+}
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--rule-strong); }
+.tab .n { font-family: var(--font-data); font-weight: 400; font-size: 12px; margin-left: 4px; }
+.panel { display: grid; gap: 28px; }
+td.rk { white-space: nowrap; }
+.add-btn {
+  font: inherit; font-size: 16px; line-height: 1; width: 28px; height: 28px; margin-right: 6px; vertical-align: middle;
+  background: var(--surface); color: var(--fg); border: 1px solid var(--rule); border-radius: 4px; cursor: pointer;
+}
+.add-btn:hover { border-color: var(--fg); background: var(--fg); color: var(--bg); }
+.tag a { color: inherit; }
+
+/* Buttons */
+.btn {
+  font: inherit; font-size: 13px; color: var(--fg); background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 4px; padding: 7px 12px; min-height: 38px; cursor: pointer;
+}
+.btn:hover { border-color: var(--faint); }
+.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.btn.danger { color: var(--danger); }
+.btn:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+
+/* Meal builder */
+.meal-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.meal-bar .grow { flex: 1 1 220px; }
+.meal-bar input[type="text"] { width: 100%; }
+.b-filters { display: grid; gap: 12px; border-top: 1px solid var(--rule); padding-top: 14px; }
+.confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; }
+.sumgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); background: var(--surface); border: 1px solid var(--rule); }
+.sum { padding: 14px 16px; border-right: 1px solid var(--rule); display: grid; gap: 6px; align-content: start; min-width: 0; }
+.sum:last-child { border-right: 0; }
+@media (max-width: 760px) { .sum { border-right: 0; border-bottom: 1px solid var(--rule); } .sum:last-child { border-bottom: 0; } }
+.sum .big { font-family: var(--font-display); font-weight: 900; font-size: 2rem; line-height: 1; }
+.sum .big small { font-family: var(--font-body); font-weight: 500; font-size: 13px; color: var(--muted); margin-left: 4px; }
+.sum .sub { font-size: 13px; color: var(--muted); }
+.goal { position: relative; height: 8px; background: var(--track); border-radius: 0 4px 4px 0; overflow: hidden; }
+.goal i { display: block; height: 100%; background: var(--fg); border-radius: 0 4px 4px 0; }
+/* Beyond 100%: a second bar laid over the full one, starting again from the left */
+.goal b { position: absolute; left: 0; top: 0; height: 100%; background: var(--over); border-radius: 0 4px 4px 0; box-shadow: 2px 0 0 var(--fg); }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.badge { font-size: 12px; padding: 1px 8px; border-radius: 3px; border: 1px solid currentColor; }
+.badge.ok { color: var(--ok); }
+.badge.warn { color: var(--warn); }
+.badge.plain { color: var(--muted); }
+.ing-box { background: var(--surface); border: 1px solid var(--rule); }
+.ing { display: grid; grid-template-columns: minmax(0, 1fr) 112px 84px 64px 120px 40px; gap: 12px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--rule); }
+.ing.head { padding-block: 10px 8px; border-bottom: 3px solid var(--rule-strong); }
+.ing .num { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ing .amt { display: flex; align-items: center; gap: 6px; }
+.ing .amt input { width: 78px; }
+.ing .rm { font: inherit; font-size: 18px; line-height: 1; width: 32px; height: 32px; background: none; border: 1px solid transparent; border-radius: 4px; color: var(--muted); cursor: pointer; }
+.ing .rm:hover { border-color: var(--rule); color: var(--danger); }
+.m-only { display: none; }
+@media (max-width: 640px) {
+  .ing { grid-template-columns: minmax(0, 1fr) 104px 34px; gap: 8px; }
+  .ing .c-p, .ing .c-k, .ing .c-s { display: none; }
+  .m-only { display: inline; }
+}
+.add-food { padding: 12px 14px; display: grid; gap: 8px; }
+.add-food input[type="search"] { width: 100%; }
+.results { display: grid; border: 1px solid var(--rule); }
+.res {
+  font: inherit; text-align: left; background: var(--surface); color: var(--fg); border: 0; border-bottom: 1px solid var(--rule);
+  padding: 8px 12px; cursor: pointer; display: grid; gap: 2px;
+}
+.res:last-child { border-bottom: 0; }
+.res:hover, .res:focus-visible { background: var(--hover); }
+.res .fname { font-size: 14px; }
+.empty-meal { padding: 22px 14px; color: var(--muted); text-align: center; }
+.topups { display: flex; flex-wrap: wrap; gap: 8px; }
+.topup { display: grid; gap: 2px; text-align: left; }
+.topup b { font-weight: 600; }
+.topup span { font-size: 12px; color: var(--muted); }
+.note { font-size: 13px; color: var(--muted); margin: 0; }
+.note.warn { color: var(--warn); }
+.myfoods { background: var(--surface); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 16px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.form-grid input, .form-grid select { width: 100%; }
+.form-grid .wide { grid-column: 1 / -1; }
+.err { color: var(--danger); font-size: 13px; margin: 0; }
+.mylist { display: grid; }
+.myrow { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--rule); }
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20;
+  background: var(--fg); color: var(--bg); padding: 10px 14px; border-radius: 4px; display: flex; gap: 14px; align-items: center;
+  max-width: calc(100% - 32px); font-size: 14px;
+}
+.toast button { font: inherit; font-size: 13px; background: none; color: inherit; border: 1px solid currentColor; border-radius: 3px; padding: 4px 10px; cursor: pointer; }
+
+/* Sources */
+.sources { border-top: 4px solid var(--rule-strong); padding-top: 10px; display: grid; gap: 8px; font-size: 13px; color: var(--muted); }
+.sources ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; max-width: 90ch; }
+.sources a { color: var(--fg); }
 </style>
 
 <div class="wrap">
   <header>
     <h1>ProteinMaxx</h1>
-    <p class="lede">Foods ranked by how much protein you get for the calories you spend. Every value is per 100 g of the food in the state listed (cooked, raw, dry), mostly from USDA FoodData Central.</p>
+    <p class="lede">Foods ranked by how much protein you get for the calories you spend, and a builder for meals that hit your protein target. Every value is per 100 g of the food in the state listed (cooked, raw, dry), from the Swiss Food Composition Database and USDA FoodData Central.</p>
     <div class="formula">
       <span><b>Protein per 100 kcal</b> = protein g ÷ kcal × 100</span>
       <span><b>% kcal from protein</b> = protein g × 4 ÷ kcal</span>
@@ -200,6 +311,12 @@ summary { cursor: pointer; font-family: var(--font-display); font-weight: 800; t
     </div>
   </header>
 
+  <div class="tabs" role="tablist" aria-label="Views">
+    <button type="button" class="tab" role="tab" id="tab-browse" aria-controls="panel-browse" aria-selected="true">Browse foods</button>
+    <button type="button" class="tab" role="tab" id="tab-builder" aria-controls="panel-builder" aria-selected="false">Meal builder<span class="n" id="tab-count"></span></button>
+  </div>
+
+  <div class="panel" id="panel-browse" role="tabpanel" aria-labelledby="tab-browse">
   <section class="controls" aria-label="Filters">
     <div class="row">
       <div class="field"><span class="label" id="db-l">Database</span>
@@ -299,11 +416,135 @@ summary { cursor: pointer; font-family: var(--font-display); font-weight: 800; t
       <p><b>% kcal from protein</b> uses 4 kcal per gram. USDA calories use food-specific factors, so this percentage can differ by a few points from other tools and is capped at 100%.</p>
       <p><b>Quality score</b> is an approximate amino-acid score based on published DIAAS and PDCAAS values, capped at 1.0. Animal proteins and soy score high. Grains, nuts and wheat gluten are limited by lysine. Collagen scores 0 because it lacks tryptophan, so it cannot cover protein needs alone. Values for vegetables, fruit and seeds are rough estimates. Mixing plant sources (grains with legumes) covers the gaps in practice.</p>
       <p><b>Density matters too.</b> Spinach has an excellent ratio but you would need about a kilogram to get 30 g of protein. Use the "Min protein per 100 g" slider or the target column to keep results practical.</p>
+      <p><b>Portions</b> for Swiss foods are typical amounts chosen by ProteinMaxx (for example 120 g for meat or fish, 30 g for cheese), not FSVO values.</p>
     </div>
   </details>
-</div>
+  </div>
 
-<script src="swiss-foods.js"></script>
+  <div class="panel" id="panel-builder" role="tabpanel" aria-labelledby="tab-builder" hidden>
+    <section aria-labelledby="meal-h" style="display:grid;gap:16px">
+      <div class="section-head"><h2 id="meal-h">Your meal</h2><p>Saved in this browser only.</p></div>
+      <div class="meal-bar">
+        <label class="field" for="meal-sel"><span class="label">Meal</span><select id="meal-sel"></select></label>
+        <label class="field grow" for="meal-name"><span class="label">Name</span><input id="meal-name" type="text" autocomplete="off"></label>
+        <button type="button" class="btn" id="meal-new">New meal</button>
+        <button type="button" class="btn" id="meal-dup">Duplicate</button>
+        <button type="button" class="btn" id="meal-copy">Copy as text</button>
+        <button type="button" class="btn danger" id="meal-del">Delete</button>
+      </div>
+      <div class="confirm" id="del-confirm" hidden></div>
+      <textarea id="copy-fallback" rows="8" style="width:100%;font-family:var(--font-data);font-size:13px" hidden aria-label="Meal as text"></textarea>
+      <div class="row">
+        <label class="field" for="meal-type"><span class="label">Meal type</span>
+          <select id="meal-type">
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="dinner">Dinner</option>
+            <option value="snack">Snack</option>
+            <option value="other">Other</option>
+          </select></label>
+        <label class="field" for="meal-target"><span class="label">Protein target (g per serving)</span>
+          <input id="meal-target" type="number" min="0" max="300" step="5"></label>
+        <label class="field" for="meal-kcal"><span class="label">Calorie target (optional)</span>
+          <input id="meal-kcal" type="number" min="0" max="5000" step="10" placeholder="none"></label>
+        <label class="field" for="meal-serv"><span class="label">Servings</span>
+          <input id="meal-serv" type="number" min="1" max="50" step="1"></label>
+        <span class="note" id="target-note"></span>
+      </div>
+      <div class="b-filters" aria-labelledby="bf-h">
+        <div class="row" style="justify-content:space-between;gap:6px 16px">
+          <span class="label" id="bf-h">Diet and filters</span>
+          <span class="note">Shared with Browse foods. They decide which foods top-ups suggest and mark search results that don't fit. You can add foods from any database.</span>
+        </div>
+        <div class="row">
+          <div class="field"><span class="label" id="b-diet-l">Diet</span>
+            <div class="seg" role="group" aria-labelledby="b-diet-l" id="b-diet"></div></div>
+        </div>
+        <div class="row">
+          <div class="field"><span class="label" id="b-flags-l">Also require</span>
+            <div class="chips" role="group" aria-labelledby="b-flags-l" id="b-flags"></div></div>
+          <label class="field" for="b-dens"><span class="label">Min protein per 100 g</span>
+            <span class="row" style="gap:10px"><input id="b-dens" type="range" min="0" max="30" step="1" value="0"><span class="range-val" id="b-dens-v">any</span></span></label>
+          <button type="button" class="linkbtn" id="b-reset">Reset filters</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="sumgrid" id="meal-sum"></div>
+
+    <section aria-labelledby="ing-h" style="display:grid;gap:12px">
+      <div class="section-head"><h2 id="ing-h">Ingredients</h2><p>Amounts are for the whole recipe, in the state named (raw, cooked, dry).</p></div>
+      <div class="ing-box">
+        <div class="ing head label"><span>Ingredient</span><span>Amount</span><span class="num c-p">Protein</span><span class="num c-k">kcal</span><span class="c-s">Share of protein</span><span></span></div>
+        <div id="meal-items"></div>
+        <div class="add-food">
+          <label class="label" for="add-q">Add a food from any database</label>
+          <input id="add-q" type="search" placeholder="Tofu, lentils, chickpeas, tempeh…" autocomplete="off">
+          <div class="results" id="add-res" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="top-h" style="display:grid;gap:12px">
+      <div class="section-head"><h2 id="top-h">Protein top-ups</h2><p id="top-sub"></p></div>
+      <div class="topups" id="topups"></div>
+    </section>
+
+    <section aria-labelledby="my-h" style="display:grid;gap:12px">
+      <div class="section-head"><h2 id="my-h">My foods</h2><p>Add products that aren't in the databases. Saved in this browser.</p></div>
+      <div class="myfoods">
+        <div class="row" style="align-items:end">
+          <label class="field" for="off-q" style="flex:1 1 280px"><span class="label">Barcode or Open Food Facts link</span>
+            <input id="off-q" type="text" inputmode="text" placeholder="7613312320747" autocomplete="off"></label>
+          <button type="button" class="btn" id="off-go">Look up</button>
+        </div>
+        <p class="note" id="off-status">Fills in the form from the product's label data on Open Food Facts. You can also type values in yourself.</p>
+        <form id="my-form" class="form-grid" novalidate>
+          <label class="field wide" for="my-name"><span class="label">Name</span><input id="my-name" type="text" autocomplete="off" placeholder="M-Budget Protein Quark"></label>
+          <label class="field" for="my-brand"><span class="label">Brand (optional)</span><input id="my-brand" type="text" autocomplete="off"></label>
+          <label class="field" for="my-basis"><span class="label">Values are</span>
+            <select id="my-basis"><option value="100">per 100 g</option><option value="serv">per serving</option></select></label>
+          <label class="field" for="my-sv"><span class="label">Serving size (g)</span><input id="my-sv" type="number" min="1" step="1" placeholder="100"></label>
+          <label class="field" for="my-kcal"><span class="label">Energy (kcal)</span><input id="my-kcal" type="number" min="0" step="any"></label>
+          <label class="field" for="my-p"><span class="label">Protein (g)</span><input id="my-p" type="number" min="0" step="any"></label>
+          <label class="field" for="my-f"><span class="label">Fat (g)</span><input id="my-f" type="number" min="0" step="any"></label>
+          <label class="field" for="my-c"><span class="label">Carbohydrates (g)</span><input id="my-c" type="number" min="0" step="any"></label>
+          <label class="field" for="my-fib"><span class="label">Fibre (g)</span><input id="my-fib" type="number" min="0" step="any"></label>
+          <label class="field" for="my-salt"><span class="label">Salt (g)</span><input id="my-salt" type="number" min="0" step="any"></label>
+          <label class="field" for="my-src"><span class="label">Main protein source</span>
+            <select id="my-src">
+              <option value="">Choose…</option>
+              <option value="plant">Plant</option>
+              <option value="dairy">Dairy</option>
+              <option value="egg">Egg</option>
+              <option value="fish">Fish</option>
+              <option value="shellfish">Shellfish</option>
+              <option value="poultry">Poultry</option>
+              <option value="meat">Meat (not pork)</option>
+              <option value="pork">Pork</option>
+            </select></label>
+          <label class="field" for="my-gl"><span class="label">Gluten</span>
+            <select id="my-gl"><option value="2">Not sure</option><option value="0">Gluten-free</option><option value="1">Contains gluten</option></select></label>
+          <div class="wide row"><button type="submit" class="btn primary" id="my-save">Save food</button><button type="button" class="btn" id="my-clear">Clear form</button><p class="err" id="my-err" role="alert"></p></div>
+        </form>
+        <div class="mylist" id="my-list"></div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="sources" aria-labelledby="src-h">
+    <h2 id="src-h">Sources</h2>
+    <ul>
+      <li>Nutrient data: <a href="https://naehrwertdaten.ch/en/" target="_blank" rel="noopener">Swiss Food Composition Database</a> <span id="ch-ver"></span>, Federal Food Safety and Veterinary Office (FSVO).</li>
+      <li>Additional data: <a href="https://fdc.nal.usda.gov/" target="_blank" rel="noopener">USDA FoodData Central</a> (public domain). Protein powder rows are typical label values.</li>
+      <li>Product lookups: data from <a href="https://world.openfoodfacts.org/" target="_blank" rel="noopener">Open Food Facts</a>, available under the <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">Open Database License</a>. This is community data, so check it against the label.</li>
+      <li>Diet, gluten, pork, protein-quality and portion tags are ProteinMaxx's own estimates and are not part of these databases.</li>
+    </ul>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="swiss-foods.js?v=7.1-2"></script>
 <script>
 // [name, group, source, kcal, protein, fat, carbs, fiber, serving g, serving label, gluten (0 none, 1 contains, 2 check label), quality, ref (U = USDA, L = label avg)]
 const RAW = [
@@ -415,29 +656,37 @@ const CLASSES = {
 };
 const classOf = s => s === "plant" ? "plant" : (s === "dairy" || s === "egg") ? "dairy" : "animal";
 
-const makeFoods = rows => rows.map(([name, group, src, kcal, p, f, c, fib, sv, sl, gl, q, ref, de = "", flags = ""], id) => {
-  const ppc = p / kcal * 100;
+// Stable keys let saved meals find a food again: FSVO id, USDA name, or the id of one of your own foods
+const keyOf = (ref, name, fid) => ref === "CH" ? "ch:" + fid : (ref === "MY" || ref === "OFF") ? "my:" + fid : "us:" + name;
+const makeFoods = rows => rows.map(([name, group, src, kcal, p, f, c, fib, sv, sl, gl, q, ref, de = "", flags = "", salt = null, fid = null, url = ""], id) => {
+  const ppc = kcal > 0 ? p / kcal * 100 : 0;
   const net = Math.max(0, c - (fib || 0));
   return {
-    id, name, group, src, kcal, p, f, c, fib, sv, sl, gl, q, ref,
+    id, key: keyOf(ref, name, fid), name, group, src, kcal, p, f, c, fib, sv, sl, gl, q, ref, salt, url,
     cls: classOf(src),
     ppc,
     pct: Math.min(100, p * 4 / kcal * 100),
     qpc: ppc * Math.min(1, q),
     p100: p,
     serv: p * sv / 100,
-    netPct: net * 4 / kcal * 100,
-    fatPct: f * 9 / kcal * 100,
+    netPct: kcal > 0 ? net * 4 / kcal * 100 : 0,
+    fatPct: kcal > 0 ? f * 9 / kcal * 100 : 0,
     split: (() => { const P = p * 4, F = f * 9, C = c * 4, T = P + F + C || 1; return [P / T, F / T, C / T]; })(),
     de, composite: flags.includes("c"), porkMaybe: flags.includes("k"),
     hay: (name + " " + de + " " + group).toLowerCase(),
   };
 });
 
+// Your own foods, stored in the same row format as the databases (group "My foods", ref MY or OFF)
+function myFoodRows() {
+  try { const rows = JSON.parse(localStorage.getItem("pmx-myfoods") || "[]"); return Array.isArray(rows) ? rows : []; } catch (e) { return []; }
+}
+
 function loadDataset() {
   const swiss = S.db === "ch" && Array.isArray(window.SWISS_FOODS);
-  FOODS = makeFoods(swiss ? [...window.SWISS_FOODS, ...RAW.filter(r => r[1] === "Powders")] : RAW);
-  GROUPS = swiss ? SWISS_GROUPS : USDA_GROUPS;
+  const mine = myFoodRows();
+  FOODS = makeFoods([...(swiss ? [...window.SWISS_FOODS, ...RAW.filter(r => r[1] === "Powders")] : RAW), ...mine]);
+  GROUPS = [...(swiss ? SWISS_GROUPS : USDA_GROUPS), ...(mine.length ? ["My foods"] : [])];
   S.groups = S.groups.filter(g => GROUPS.includes(g));
   $("groups").innerHTML = `<button type="button" class="chip" data-v="">All</button>` +
     GROUPS.map(g => `<button type="button" class="chip" data-v="${esc(g)}">${esc(g)}<span class="n"></span></button>`).join("");
@@ -512,6 +761,7 @@ function render() {
   renderPicks(list);
   renderTable(list);
   renderChart(list);
+  if (typeof renderBuilder === "function") renderBuilder();
 }
 
 function syncControls() {
@@ -561,6 +811,8 @@ function renderTable(list) {
     const t = forTarget(f);
     const tags = [
       f.ref === "L" ? `<span class="tag" title="Typical label value; varies by brand">label avg</span>` : "",
+      f.ref === "MY" ? `<span class="tag">my food</span>` : "",
+      f.ref === "OFF" ? `<span class="tag"><a href="${esc(f.url)}" target="_blank" rel="noopener">Open Food Facts</a></span>` : "",
       f.gl === 2 ? `<span class="tag warn" title="Gluten depends on brand or processing">check label for gluten</span>` : "",
       f.gl === 1 ? `<span class="tag">contains gluten</span>` : "",
       f.q === 0 ? `<span class="tag warn" title="Missing tryptophan; incomplete protein">incomplete protein</span>` : "",
@@ -570,7 +822,7 @@ function renderTable(list) {
     const deName = f.de && f.de !== f.name ? `<span lang="de">${esc(f.de)}</span>` : "";
     const [sp, sf, sc] = f.split;
     return `<tr data-id="${f.id}" tabindex="0" class="${selected === f.id ? "on" : ""}">
-      <td class="rk">${i + 1}</td>
+      <td class="rk"><button type="button" class="add-btn" data-add="${esc(f.key)}" aria-label="Add ${esc(f.name)} to your meal" title="Add to meal">+</button>${i + 1}</td>
       <td><div class="fname">${esc(f.name)}</div>
         <div class="meta">${deName}<span><i class="dot" style="background:${color(f.cls)};width:8px;height:8px"></i> ${esc(f.group)}</span>${tags}</div></td>
       <td><div class="ppc"><div class="bar"><i style="width:${Math.min(100, f.ppc / maxPpc * 100)}%;background:${color(f.cls)}"></i></div><span>${fmt(f.ppc)}</span></div></td>
@@ -690,8 +942,10 @@ document.querySelector("#tbl thead").addEventListener("click", e => {
 });
 $("tbody").addEventListener("click", e => {
   if (e.target.id === "more") { rowLimit += 200; renderTable(sorted(FOODS.filter(f => passes(f)))); return; }
+  const add = e.target.closest("[data-add]");
+  if (add) { if (typeof addToMeal === "function") addToMeal(add.dataset.add, null, true); return; }
   const tr = e.target.closest("tr[data-id]"); if (tr) select(+tr.dataset.id, false); });
-$("tbody").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { const tr = e.target.closest("tr[data-id]"); if (tr) { e.preventDefault(); select(+tr.dataset.id, false); } } });
+$("tbody").addEventListener("keydown", e => { if (e.target.closest("button")) return; if (e.key === "Enter" || e.key === " ") { const tr = e.target.closest("tr[data-id]"); if (tr) { e.preventDefault(); select(+tr.dataset.id, false); } } });
 $("picks").addEventListener("click", e => { const p = e.target.closest(".pick"); if (p) select(+p.dataset.id, true); });
 $("picks").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { const p = e.target.closest(".pick"); if (p) { e.preventDefault(); select(+p.dataset.id, true); } } });
 $("chart").addEventListener("mousemove", e => { const c = e.target.closest("circle[data-id]"); if (c) showTip(FOODS[+c.dataset.id], e); else $("tip").hidden = true; });
@@ -700,5 +954,8 @@ $("chart").addEventListener("click", e => { const c = e.target.closest("circle[d
 
 let rt;
 new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(() => renderChart(sorted(FOODS.filter(f => passes(f)))), 80); }).observe($("chart"));
+$("ch-ver").textContent = (window.SWISS_DB_VERSION || "").replace(/^V\s*/, "v");
 render();
 </script>
+<!-- Bump ?v= when meal-builder.js or swiss-foods.js changes, so browsers don't run a cached older copy -->
+<script src="meal-builder.js?v=6"></script>
